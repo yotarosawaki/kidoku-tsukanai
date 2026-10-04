@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>既読がつかない</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@500;700;900&display=swap">
+<style>
+/* Layout: one phone-width column. Title/ending = quiet night lockscreen with no notifications (ink + dusty rose); play = messenger chat. */
+:root{
+  --chat:#8ba8d3; --her:#ffffff; --herfg:#16181d; --me:#8de055; --mefg:#10170b;
+  --bar:#f6f7fa; --barfg:#16181d; --sub:#4f5d72; --line:#d9dee7;
+  --choice:#ffffff; --choicefg:#16181d; --choiceline:#b9c6da;
+  --sys:rgba(20,30,50,.32); --sysfg:#ffffff;
+  --pulse:#d9728b; --mind:#4a86d6; --push:#e0a030; --ok:#2fb24c; --bad:#e5484d;
+  --night:#141722; --night2:#232a40; --nightfg:#ecebf2; --nightsub:#a3a8bc;
+  --rose:#e09aab; --rose2:#f3cfd8;
+  --display:"Zen Old Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --body:-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --chat:#1c2230; --her:#2d3341; --herfg:#eef1f6; --me:#5fc443; --mefg:#0b1407;
+  --bar:#13161d; --barfg:#eef1f6; --sub:#9aa6b8; --line:#2a303c;
+  --choice:#232936; --choicefg:#eef1f6; --choiceline:#3a4456;
+  --sys:rgba(255,255,255,.12); --sysfg:#dfe5ee; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --chat:#1c2230; --her:#2d3341; --herfg:#eef1f6; --me:#5fc443; --mefg:#0b1407;
+  --bar:#13161d; --barfg:#eef1f6; --sub:#9aa6b8; --line:#2a303c;
+  --choice:#232936; --choicefg:#eef1f6; --choiceline:#3a4456;
+  --sys:rgba(255,255,255,.12); --sysfg:#dfe5ee; color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--night);color:var(--barfg);font-family:var(--body);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+#app{position:relative;height:100%;max-width:480px;margin:0 auto;overflow:hidden;background:var(--chat)}
+.screen{position:absolute;inset:0}
+
+/* ---------- title ---------- */
+.title{background:radial-gradient(110% 60% at 50% 0%, #2c3350 0%, var(--night2) 30%, var(--night) 72%);color:var(--nightfg);overflow-y:auto;padding:0 16px}
+.title-in{display:flex;flex-direction:column;gap:22px;padding-block:28px 32px;min-height:100%;box-sizing:border-box}
+.lock{text-align:center;display:flex;flex-direction:column;gap:2px}
+.lock-date{font-size:13px;color:var(--nightsub);letter-spacing:.08em}
+.lock-time{font-size:64px;font-weight:200;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding-block:34px 26px}
+.empty .sent{align-self:flex-end;background:var(--me);color:var(--mefg);border-radius:18px 6px 18px 18px;padding:8px 12px;font-size:14px;max-width:80%;line-height:1.5}
+.empty .sent-meta{align-self:flex-end;font-size:11px;color:var(--nightsub);margin-top:-4px}
+.empty .none{font-size:13px;color:var(--nightsub);letter-spacing:.1em;margin-top:18px}
+.logo{font-family:var(--display);font-weight:900;font-size:clamp(40px,12vw,54px);line-height:1.15;margin:0;color:var(--nightfg);text-wrap:balance;letter-spacing:.04em}
+.logo em{font-style:normal;color:var(--rose)}
+.logo small{display:block;font-family:var(--body);font-weight:500;font-size:13px;color:var(--rose2);letter-spacing:.18em;margin-bottom:12px}
+.lead{margin:0;font-size:15px;line-height:1.9;color:var(--nightfg)}
+.howto{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--nightsub);line-height:1.6}
+.howto li::before{content:"・";color:var(--rose)}
+.lbl{font-size:11px;letter-spacing:.14em;color:var(--nightsub);margin:0 0 8px}
+.start{border:0;border-radius:999px;background:var(--nightfg);color:var(--night);font-weight:800;font-size:17px;padding:16px;letter-spacing:.06em}
+.start:active{transform:scale(.98)}
+.fine{font-size:11px;line-height:1.7;color:var(--nightsub);margin:0}
+.coll{display:flex;flex-wrap:wrap;gap:6px}
+.coll span{font-size:11px;border-radius:999px;padding:4px 9px;border:1px dashed rgba(243,207,216,.3);color:var(--nightsub)}
+.coll span.got{border-style:solid;border-color:var(--rose2);color:var(--nightfg)}
+
+/* ---------- chat ---------- */
+.chat{display:flex;flex-direction:column;background:var(--chat)}
+.hdr{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bar);color:var(--barfg);border-bottom:1px solid var(--line)}
+.hdr .back{background:none;border:0;font-size:26px;line-height:1;padding:0 4px;color:var(--barfg)}
+.ava{width:34px;height:34px;border-radius:50%;flex:none;overflow:hidden;background:#5d7a4f;display:block}
+.ava svg{display:block;width:100%;height:100%}
+.hdr .nm{flex:1;min-width:0;font-weight:700;font-size:16px;display:flex;flex-direction:column}
+.hdr .nm span{font-size:11px;font-weight:400;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr .icons{display:flex;gap:14px;color:var(--barfg)}
+.hdr svg.i{width:22px;height:22px;display:block}
+.meters{display:flex;gap:10px;align-items:center;padding:7px 16px;background:var(--bar);border-bottom:1px solid var(--line);font-size:11px;color:var(--sub)}
+.meter{flex:1;min-width:0;display:flex;align-items:center;gap:5px;position:relative}
+.meter b{font-weight:600;white-space:nowrap}
+.meter .trk{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter .fill{height:100%;border-radius:3px;transition:width .5s}
+.meter.pulse .fill{background:var(--pulse)}
+.meter.mind .fill{background:var(--mind)}
+.meter.push .fill{background:var(--push)}
+.meter .num{font-variant-numeric:tabular-nums;width:20px;text-align:right;color:var(--barfg)}
+.meter .dl{position:absolute;right:0;top:-14px;font-weight:800;font-size:12px;animation:floatup 1.3s ease-out forwards;pointer-events:none}
+@keyframes floatup{from{opacity:1;transform:translateY(4px)}to{opacity:0;transform:translateY(-10px)}}
+.clock{font-variant-numeric:tabular-nums;font-weight:700;color:var(--barfg);font-size:13px;white-space:nowrap}
+
+.log{flex:1;overflow-y:auto;padding:12px 16px 10px;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch;position:relative}
+.day{align-self:center;background:var(--sys);color:var(--sysfg);font-size:11px;padding:3px 10px;border-radius:999px;margin:4px 0}
+.sys{align-self:center;background:var(--sys);color:var(--sysfg);font-size:12px;padding:5px 12px;border-radius:999px;text-align:center;max-width:90%;line-height:1.5;animation:pop .25s ease-out}
+.row{display:flex;align-items:flex-end;gap:6px;max-width:100%;animation:pop .22s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.row.her{align-self:flex-start}
+.row.me{align-self:flex-end;flex-direction:row-reverse}
+.row .ava{width:36px;height:36px;align-self:flex-start}
+.row.cont .ava{visibility:hidden}
+.col{display:flex;flex-direction:column;gap:3px;min-width:0}
+.row.her .who{font-size:11px;color:var(--sysfg);opacity:.9}
+.row.cont .who{display:none}
+.bub{padding:8px 12px;border-radius:18px;font-size:15px;line-height:1.5;max-width:68vw;word-break:break-word;white-space:pre-wrap}
+@media (min-width:480px){.bub{max-width:300px}}
+.row.her .bub{background:var(--her);color:var(--herfg);border-top-left-radius:6px}
+.row.me .bub{background:var(--me);color:var(--mefg);border-top-right-radius:6px}
+.row.cont.her .bub{border-top-left-radius:18px}
+.meta{display:flex;flex-direction:column;font-size:10px;color:var(--sysfg);line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap;opacity:.95}
+.row.me .meta{align-items:flex-end}
+.rd{animation:pop .4s ease-out}
+.stamp{font-size:60px;line-height:1;padding:2px}
+.photo{width:170px;border-radius:14px;overflow:hidden;display:block;background:var(--her)}
+.photo svg{display:block;width:100%;height:auto}
+.typing{display:flex;gap:4px;padding:13px 14px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--sub);animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,60%,100%{opacity:.25;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+.spark{align-self:center;font-size:12px;color:var(--sysfg);display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:var(--sys);animation:pop .25s ease-out}
+.spark i{font-style:normal;display:inline-block;animation:strike .9s ease-out both}
+.spark.lit i{animation:flare 1.2s ease-out both}
+@keyframes strike{0%{transform:scale(.4);opacity:0}30%{transform:scale(1.3);opacity:1}100%{transform:scale(.8);opacity:.35;filter:grayscale(1)}}
+@keyframes flare{0%{transform:scale(.4);opacity:0}40%{transform:scale(1.4);opacity:1}100%{transform:scale(1);opacity:1}}
+.meter.pulse b{color:var(--pulse)}
+.skip{align-self:center;background:none;border:0;color:var(--sysfg);font-size:12px;letter-spacing:.3em;padding:6px;opacity:.8}
+
+.banner{position:absolute;left:10px;right:10px;top:8px;z-index:4;display:flex;gap:10px;align-items:center;background:var(--bar);color:var(--barfg);border-radius:14px;padding:9px 12px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13px;line-height:1.4;animation:slide 2.6s ease-in-out forwards}
+.banner .ic{width:28px;height:28px;border-radius:7px;background:var(--push);display:grid;place-items:center;color:#fff;flex:none;font-size:14px}
+.banner b{display:block;font-size:12px}
+@keyframes slide{0%{transform:translateY(-120%);opacity:0}12%,80%{transform:none;opacity:1}100%{transform:translateY(-120%);opacity:0}}
+
+.dock{background:var(--bar);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.choices{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:8px 16px 4px;max-height:42vh;overflow-y:auto}
+.choices button{text-align:left;background:var(--choice);color:var(--choicefg);border:1px solid var(--choiceline);border-radius:14px;padding:10px 14px;font-size:14px;line-height:1.45;animation:pop .2s ease-out both}
+.choices button:nth-child(2){animation-delay:.05s}.choices button:nth-child(3){animation-delay:.1s}.choices button:nth-child(4){animation-delay:.15s}
+.choices button:active{background:var(--me);color:var(--mefg)}
+.wait{display:flex;flex-direction:column;gap:8px;padding:10px 16px 12px}
+.mono{margin:0;font-size:13px;line-height:1.6;color:var(--sub);min-height:1.6em}
+.wstat{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+.wstat b{color:var(--barfg)}
+.wstat b.read{color:var(--ok)}
+.wbtns{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:6px}
+.wbtns button{border:1px solid var(--choiceline);background:var(--choice);color:var(--choicefg);border-radius:12px;padding:11px 4px;font-size:13px;font-weight:600}
+.wbtns button.main{background:var(--me);border-color:var(--me);color:var(--mefg)}
+.wbtns button:disabled{opacity:.4}
+.chase{display:flex;flex-direction:column;gap:6px}
+.chase p{margin:0;font-size:11px;color:var(--bad)}
+.chase button{text-align:left;border:1px dashed var(--bad);background:var(--choice);color:var(--choicefg);border-radius:12px;padding:9px 12px;font-size:13px}
+.compose{display:flex;align-items:center;gap:8px;padding:8px 12px 10px}
+.compose .plus{background:none;border:0;padding:4px;color:var(--sub)}
+.compose svg{width:24px;height:24px;display:block}
+.compose input{flex:1;min-width:0;border:0;border-radius:999px;padding:10px 14px;font-size:16px;color:var(--barfg);background:color-mix(in srgb,var(--line) 70%,var(--bar))}
+.compose input:disabled{opacity:.5}
+.compose .send{background:none;border:0;padding:4px;color:var(--ok)}
+.compose .send:disabled{color:var(--sub);opacity:.5}
+
+/* ---------- ending ---------- */
+.end{z-index:6;background:rgba(20,23,34,.97);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:var(--nightfg);overflow-y:auto;padding:0 16px;animation:fadein .6s ease-out}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.end-in{display:flex;flex-direction:column;gap:18px;padding-block:44px 36px}
+.rank{align-self:flex-start;font-size:12px;letter-spacing:.24em;font-weight:800;padding:4px 10px;border-radius:4px;background:#5a6078;color:#fff}
+.rank.NORMAL{background:#7d8aa6}.rank.GOOD{background:var(--rose);color:#2a0d16}.rank.TRUE{background:linear-gradient(90deg,var(--rose2),#ffe3a3);color:#2a0d16}
+.end h2{font-family:var(--display);font-weight:900;font-size:clamp(30px,9vw,42px);line-height:1.25;margin:0;color:var(--nightfg);text-wrap:balance}
+.end h2.good{color:var(--rose)}
+.end .desc{margin:0;font-size:15px;line-height:1.85}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0}
+.stats div{border-top:1px solid rgba(243,207,216,.25);padding-top:8px}
+.stats dt{font-size:10px;letter-spacing:.1em;color:var(--nightsub)}
+.stats dd{margin:2px 0 0;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.tip{margin:0;font-size:13px;line-height:1.7;color:var(--rose2);border-left:2px solid var(--rose);padding-left:10px}
+.btns{display:flex;flex-direction:column;gap:8px}
+.btns .sub2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ghost{border:1px solid rgba(243,207,216,.35);background:transparent;color:var(--nightfg);border-radius:999px;padding:12px;font-size:14px;text-align:center;text-decoration:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+<div id="app">
+  <!-- TITLE -->
+  <section id="title" class="screen title">
+    <div class="title-in">
+      <div class="lock" aria-hidden="true">
+        <div class="lock-date">月曜日の夜</div>
+        <div class="lock-time">23:58</div>
+      </div>
+      <div class="empty" aria-hidden="true">
+        <div class="sent">今日はありがとうございました。おやすみなさい。</div>
+        <div class="sent-meta">21:30 ・ 未読</div>
+        <div class="none">通知はありません</div>
+      </div>
+      <h1 class="logo"><small>おしとやかな年上女性との、火のつかない恋</small>既読が、<br><em>つかない。</em></h1>
+      <p class="lead">職場の飲み会で、経理部の早瀬静香さん（42）と連絡先を交換した。おだやかで、上品で、返信がとにかく遅い。何度マッチを擦っても、この恋にはなかなか火がつかない。</p>
+      <ul class="howto">
+        <li>メッセージは候補から選ぶか、自分で書いて送る</li>
+        <li>送ったあとは「待つ」「追いLINE」「今日はもう寝る」のどれかを選ぶ</li>
+        <li>待つほど心がすり減る。追いLINEすると、しつこさが上がる</li>
+        <li>既読がつくたびにマッチを擦る。でも、だいたいしけっている</li>
+        <li>心が0、またはしつこさが100で終了。エンディングは全8種</li>
+      </ul>
+      <button class="start" id="startBtn" type="button">トークを開く</button>
+      <div>
+        <p class="lbl" id="collLbl">回収したエンディング 0 / 8</p>
+        <div class="coll" id="collTitle"></div>
+      </div>
+      <p class="fine">※ 登場人物・出来事はすべてフィクションです。自由入力の文章はこの端末の中だけで判定し、どこにも送信しません。実在の人の名前は入力しないでください。</p>
+    </div>
+  </section>
+
+  <!-- CHAT -->
+  <section id="chat" class="screen chat" hidden>
+    <header class="hdr">
+      <button class="back" id="backBtn" type="button" aria-label="タイトルに戻る">‹</button>
+      <div class="ava" id="hdrAva"></div>
+      <div class="nm">早瀬 静香<span id="hdrSub">庭の薔薇のお世話をしています</span></div>
+      <div class="icons" aria-hidden="true">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/></svg>
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 005.9 5.9l1.5-2 4 1.5v3a2 2 0 01-2 2A16 16 0 014.5 5.5a2 2 0 012-2z" stroke-linejoin="round"/></svg>
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </div>
+    </header>
+    <div class="meters">
+      <div class="meter pulse" id="mPulse"><b>火</b><div class="trk"><div class="fill"></div></div><span class="num">0</span></div>
+      <div class="meter mind" id="mMind"><b>心</b><div class="trk"><div class="fill"></div></div><span class="num">0</span></div>
+      <div class="meter push" id="mPush"><b>しつこさ</b><div class="trk"><div class="fill"></div></div><span class="num">0</span></div>
+      <span class="clock" id="clock">月 21:30</span>
+    </div>
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="dock">
+      <div class="choices" id="choices" hidden></div>
+      <div class="wait" id="wait" hidden>
+        <p class="mono" id="mono"></p>
+        <div class="wstat"><span id="wElapsed">送信から 0時間</span><b id="wState">未読</b></div>
+        <div class="wbtns" id="wBtns">
+          <button type="button" class="main" id="wWait">もう少し待つ</button>
+          <button type="button" id="wChase">追いLINE</button>
+          <button type="button" id="wSleep">今日はもう寝る</button>
+        </div>
+        <div class="chase" id="chaseList" hidden></div>
+      </div>
+      <form class="compose" id="compose" autocomplete="off">
+        <button class="plus" type="button" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <input id="msgIn" type="text" placeholder="メッセージを入力" maxlength="140" disabled enterkeyhint="send">
+        <button class="send" id="sendBtn" type="submit" aria-label="送信" disabled><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.5-7.5a1 1 0 000-1.8L3.4 3.6a.9.9 0 00-1.3 1L4 11l9 1-9 1-1.9 6.4a.9.9 0 001.3 1z"/></svg></button>
+      </form>
+    </div>
+  </section>
+
+  <!-- END -->
+  <section id="end" class="screen end" hidden>
+    <div class="end-in">
+      <span class="rank" id="endRank">BAD END</span>
+      <h2 id="endTitle"></h2>
+      <p class="desc" id="endDesc"></p>
+      <dl class="stats">
+        <div><dt>火</dt><dd id="sPulse">0</dd></div>
+        <div><dt>心</dt><dd id="sMind">0</dd></div>
+        <div><dt>待った時間</dt><dd id="sWait">0h</dd></div>
+        <div><dt>追いLINE</dt><dd id="sChase">0</dd></div>
+      </dl>
+      <p class="tip" id="endTip"></p>
+      <div>
+        <p class="lbl" id="collLbl2">回収したエンディング 0 / 8</p>
+        <div class="coll" id="collEnd"></div>
+      </div>
+      <div class="btns">
+        <button class="start" id="againBtn" type="button">もう一度、連絡先を交換する</button>
+        <div class="sub2">
+          <a class="ghost" id="shareBtn" href="#" target="_blank" rel="noopener">Xでシェア</a>
+          <button class="ghost" id="titleBtn" type="button">タイトルへ</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+
+/* ================= 素材 ================= */
+const ROSE_ICON = `<svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#5d7a4f"/><circle cx="20" cy="19" r="11" fill="#f2b8c6"/><path d="M20 10c5 0 9 4 9 9-3-3-6-4-9-4s-6 1-9 4c0-5 4-9 9-9z" fill="#e597ab"/><path d="M14 20c2-3 4-4 6-4s4 1 6 4c-2 2-4 3-6 3s-4-1-6-3z" fill="#d97d95"/><circle cx="20" cy="19" r="2.6" fill="#c9667f"/><path d="M12 31c4-2 7-2 8-1M28 31c-4-2-7-2-8-1" stroke="#9cc28a" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`;
+const PHOTOS = {
+  rose:`<svg viewBox="0 0 170 190"><rect width="170" height="190" fill="#6f8c5e"/><rect y="130" width="170" height="60" fill="#5b4a3b"/><g fill="#86a872"><ellipse cx="30" cy="120" rx="26" ry="12"/><ellipse cx="140" cy="112" rx="28" ry="12"/><ellipse cx="95" cy="138" rx="30" ry="10"/></g><g><circle cx="62" cy="76" r="24" fill="#f6c9d4"/><path d="M62 54c13 0 22 9 22 22-6-6-14-9-22-9s-16 3-22 9c0-13 9-22 22-22z" fill="#efb2c2"/><circle cx="62" cy="76" r="9" fill="#e595a9"/><circle cx="118" cy="62" r="18" fill="#f6c9d4"/><circle cx="118" cy="62" r="7" fill="#e595a9"/><circle cx="104" cy="104" r="14" fill="#f9d8e0"/><circle cx="104" cy="104" r="5" fill="#eaa5b6"/></g><text x="10" y="178" font-size="11" fill="#f3e6d8" font-family="sans-serif">Pierre de Ronsard</text></svg>`,
+};
+
+/* ================= シナリオ ================= */
+// tag: polite 丁寧 / common 共通の話題 / sincere 誠実 / push 押す / young 若者ノリ / age 年齢に触れる / plain 普通
+const TAGFX = {
+  polite:{p:4}, common:{p:8}, sincere:{p:8}, push:{p:-2, m:-6, s:10}, young:{p:-4, s:3}, age:{p:-10, m:-4}, plain:{p:1},
+};
+const GENERIC_R = {
+  polite:[['ご丁寧にありがとうございます。']],
+  common:[['そうですね。'],['ふふ、お詳しいんですね。']],
+  sincere:[['……ありがとうございます。']],
+  push:[['お気持ちだけ、いただきますね。']],
+  young:[['お疲れさまです。']],
+  age:[['お気遣いなく。'],['……']],
+  plain:[['はい。'],['そうなんですね。']],
+};
+
+const D = 1440;
+const at = (day, h, m) => day * D + h * 60 + m;
+
+const TURNS = [
+  { start:at(0,21,30), scene:'飲み会のあと、早瀬さんから連絡が来ていた。',
+    choices:[
+      { t:'早瀬さん、今日はありがとうございました！お話しできてうれしかったです。おやすみなさい。', tag:'polite' },
+      { t:'今度、ふたりでゆっくり飲みに行きませんか？', tag:'push' },
+      { t:'おつかれっす！今日マジ楽しかったっすw また絡んでください🙌', tag:'young' },
+      { t:'お話に出ていたご自宅の薔薇、いつか写真で見てみたいです。', tag:'common' },
+    ],
+    r:{ polite:[['ご丁寧にありがとうございます。','おやすみなさい。']],
+        common:[['ありがとうございます。','まだつぼみなんです。']],
+        push:[['お誘いありがとうございます。','皆さんとご一緒のときに、ぜひ。']],
+        young:[['お疲れさまでした。']] } },
+  { start:at(2,12,10), scene:'社食で、早瀬さんがひとりで文庫本を読んでいるのを見かけた。',
+    choices:[
+      { t:'さっき読まれていた本、なんの本ですか？気になってしまって。', tag:'common' },
+      { t:'お昼ご一緒できたらと思ったのですが、読書中だったので遠慮しました。', tag:'polite' },
+      { t:'明日のお昼、一緒に食べませんか？', tag:'push' },
+      { t:'早瀬さんって、全然40代に見えないですよね！', tag:'age' },
+    ],
+    r:{ common:[['向田邦子のエッセイです。','古い本ですよ。']],
+        polite:[['お気遣いありがとうございます。']],
+        push:[['明日はお弁当なので。','ごめんなさい。']],
+        age:[['ありがとうございます。','お世辞でもうれしいです。']] } },
+  { start:at(3,20,0), scene:'早瀬さんのステータスメッセージが「庭の薔薇が咲きました」に変わった。', status:'庭の薔薇が咲きました',
+    choices:[
+      { t:'薔薇、咲いたんですね！おめでとうございます。何色ですか？', tag:'common' },
+      { t:'ステータス拝見しました。きれいに咲いてよかったですね。', tag:'polite' },
+      { t:'薔薇咲いたんすね！写真ほしいです📸✨', tag:'young' },
+      { t:'その薔薇、見に行ってもいいですか？', tag:'push' },
+    ],
+    r:{ common:[[{photo:'rose'},'淡いピンクです。','ピエール・ドゥ・ロンサールという品種です。']],
+        polite:[['ありがとうございます。']],
+        young:[[{photo:'rose'}]],
+        push:[['うちは少し遠いので。','お気持ちだけいただきますね。']] } },
+  { start:at(5,10,0), scene:'週末。思い切って、誘ってみることにした。',
+    choices:[
+      { t:'駅前に紅茶のおいしいお店ができたそうです。よかったら、今度ご一緒しませんか？', tag:'common' },
+      { t:'来週の土曜、ディナーを予約してもいいですか？', tag:'push' },
+      { t:'お時間あるときで構わないので、いつかお茶でもいかがですか。', tag:'polite' },
+      { t:'来週ヒマな日あります？どっか行きましょー！', tag:'young' },
+    ],
+    r:{ common:[['紅茶、好きなんです。','でも、私なんかと行っても楽しくないですよ。']],
+        polite:[['ありがとうございます。','考えておきますね。']],
+        push:[['ディナーは、若い方を誘ってあげてください。']],
+        young:[['来週は母の通院の付き添いがあって。','ごめんなさい。']] } },
+  { start:at(7,19,0), herFirst:['高橋さん、少しよろしいですか。','いつも気にかけてくださって、ありがとうございます。','でも、私のような年の者に、気を遣わなくていいんですよ。','この年になると、燃えるような気持ちには、なかなかなれなくて。','高橋さんには、もっと若くて素敵な方がいると思います。'],
+    scene:'月曜の夜。早瀬さんから、めずらしく連絡が来た。', read:[0.1, 1.5], replyP:1,
+    choices:[
+      { t:'年齢は関係なく、早瀬さんとお話しするのが楽しいんです。', tag:'sincere' },
+      { t:'若い子には興味ないです。早瀬さんがいいんです。', tag:'push' },
+      { t:'そうですよね…すみませんでした。', end:'akirame' },
+      { t:'いやいや、早瀬さんまだ全然イケますって！', tag:'age' },
+    ],
+    r:{ sincere:[['……','そう言っていただけるのは、うれしいです。']],
+        push:[['そんなふうに言ってはだめですよ。','若い方にも失礼です。']],
+        age:[['……','ありがとうございます。']] } },
+  { start:at(9,9,30), scene:'早瀬さんが、今日は体調不良でお休みらしい。', status:'',
+    choices:[
+      { t:'お大事になさってください。返信は不要です。', tag:'polite', bonus:{p:6, s:-10} },
+      { t:'何か買って届けましょうか？住所を教えてください！', tag:'push', bonus:{p:-6, s:12} },
+      { t:'あたたかい生姜湯がいいそうです。ゆっくり休んでくださいね。', tag:'common' },
+      { t:'大丈夫っすか！？めっちゃ心配です😭😭', tag:'young' },
+    ],
+    r:{ polite:[['ありがとうございます。','お言葉に甘えて、休みます。']],
+        push:[['ご心配おかけしてすみません。','大丈夫ですので。']],
+        common:[['生姜湯、いま飲んでいます。','ありがとうございます。']],
+        young:[['ありがとうございます。']] } },
+  { start:at(11,21,0), final:true, scene:'2週間がたった。もう、言うしかない。', status:'庭の薔薇のお世話をしています',
+    choices:[
+      { t:'早瀬さんのことが好きです。急がないので、考えてもらえませんか。', tag:'sincere' },
+      { t:'好きです！付き合ってください！', tag:'push' },
+      { t:'来年の春も、早瀬さんのお庭の話を聞いていたいです。好きです。', tag:'common' },
+      { t:'…やっぱり、なんでもないです。おやすみなさい。', end:'akirame' },
+    ] },
+];
+
+const CHASE = [
+  { t:'お忙しいところすみません、届いていますでしょうか？' },
+  { t:'🙇', stamp:true },
+  { t:'さっきのは気にしないでください！' },
+];
+
+const MONO_UNREAD = ['トーク画面を開いて、閉じた。','送った文面を、10回読み返した。','「既読」の2文字が、こんなに遠いとは。','スマホを裏返して置いた。3分で表に戻した。','あの「！」は、余計だったかもしれない。','プロフィール画像を見た。薔薇だった。','通知が鳴った気がした。気のせいだった。','もしかして、ブロック…？ いや、まさか。','マッチ箱を振ってみる。中身はまだある。たぶん。','機内モードにして、既読をつけずに読む人もいるらしい。そうであってほしい。'];
+const MONO_READ = ['既読はついた。それだけだった。','湿ったマッチを、ずっと擦っている気分だ。','火種は、たぶんまだ見つかっていない。','既読から、もう何時間たっただろう。','「既読」の横で、時間だけが進む。','返信の文面を考えてくれている…と思いたい。'];
+const MONO_NIGHT = ['眠れない。天井を見ている。','午前3時。スマホの明かりがまぶしい。','寝返りを打つたびに、通知を確認してしまう。'];
+const FAKE = [
+  { ic:'🛒', who:'ドラッグストア', tx:'本日限定！ポイント10倍クーポン' },
+  { ic:'📦', who:'配送のお知らせ', tx:'お荷物は明日お届け予定です' },
+  { ic:'👥', who:'営業部（42）', tx:'部長：明日の会議資料、確認お願いします' },
+  { ic:'🎮', who:'ゲーム', tx:'スタミナが全回復しました' },
+];
+
+const ENDINGS = {
+  kokoro:{ rank:'BAD', title:'心が折れたEND', seq:[{sys:'トーク画面を開く気力がなくなった'}],
+    desc:'既読を待ちつづけるうちに、心のほうが先に折れた。', tip:'待つのがつらいときは「今日はもう寝る」。夜のあいだに、心は少し回復する。' },
+  kyori:{ rank:'BAD', title:'そっと距離を置かれたEND', seq:['高橋さん。','たくさんご連絡いただいて、ありがとうございます。','少しだけ、お返事のペースを落とさせてくださいね。',{sys:'それ以来、既読がつくまで1週間かかるようになった'}],
+    desc:'押せば押すほど、やわらかく遠ざかっていった。', tip:'追いLINEは逆効果。待つのも、大人の礼儀。' },
+  akirame:{ rank:'BAD', title:'物分かりのいい後輩END', seq:['わかってくださって、ありがとうございます。','これからも、お仕事がんばってくださいね。'],
+    desc:'引き際だけは、美しかった。', tip:'早瀬さんの「若い方がいい」は、本心とは限らない。' },
+  mitoku:{ rank:'BAD', title:'未読のまま年が明けたEND', seq:[{sys:'未読のまま、年が明けた'},{sys:'1月1日 0:00'},'あけましておめでとうございます。','本年もどうぞよろしくお願いいたします。'],
+    desc:'告白は未読のまま、新年のあいさつだけが届いた。たぶん、全員に同じ文面で。', tip:'火が小さいままだと、告白は読まれもしない。' },
+  wakai:{ rank:'BAD', title:'若い子に行きなさいEND', seq:['お気持ち、本当にうれしいです。','でも、高橋さんにはもっと若くて素敵な方がいます。','その方を、大事にしてあげてくださいね。'],
+    desc:'やさしく、丁寧に、はっきりと断られた。最後まで、火はつかなかった。', tip:'共通の話題（薔薇、紅茶、本）を大事に。年齢の話は禁物。' },
+  douryou:{ rank:'NORMAL', title:'いい同僚END', seq:['お気持ちは、ありがたく受け取ります。','これからも、いい同僚でいてくださいね。'],
+    desc:'翌日、会社で会うと、いつもどおりの笑顔だった。くすぶったまま、火は消えた。', tip:'火60以上で、もう少し先へ。選択肢だけでは届かないかもしれない。' },
+  ocha:{ rank:'GOOD', title:'お茶飲み友達END', seq:['お付き合いは、ごめんなさい。','でも、お茶くらいなら。','また、お庭の話を聞いてくださいね。'],
+    desc:'火はつかなかった。でも、月に一度、紅茶を飲む約束ができた。ぬくもりくらいは残った。', tip:'火80以上・しつこさ20以下。自分の言葉で、早瀬さんの好きなものに触れてみて。' },
+  sakura:{ rank:'TRUE', title:'春を待つEND', seq:['すぐにはお返事できません。','この年になると、臆病になるんです。','来年の春、うちの庭の桜が咲いたら、見にいらっしゃいませんか。',{s:'🌸'}],
+    desc:'付き合えたわけではない。でも、小さな火種がひとつ、春まで消えずに残った。', tip:'全エンディング回収を目指してみよう。' },
+};
+const END_ORDER = ['kokoro','kyori','akirame','mitoku','wakai','douryou','ocha','sakura'];
+
+/* ================= 状態 ================= */
+let S = null;
+const skips = new Set();
+const log = $('#log'), choicesEl = $('#choices'), msgIn = $('#msgIn'), sendBtn = $('#sendBtn');
+
+let memEnds = [];
+function loadEnds(){ try{ return JSON.parse(localStorage.getItem('kidoku-tsukanai-endings') || '[]'); }catch(e){ return memEnds; } }
+function saveEnds(v){ memEnds = v; try{ localStorage.setItem('kidoku-tsukanai-endings', JSON.stringify(v)); }catch(e){} }
+let gotEnds = loadEnds();
+
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+const rr = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function shuffle(a){ a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function sleep(ms){
+  return new Promise(res => {
+    const f = () => { clearTimeout(id); skips.delete(f); res(); };
+    const id = setTimeout(f, ms);
+    skips.add(f);
+  });
+}
+log.addEventListener('click', () => [...skips].forEach(f => f()));
+try{ new ResizeObserver(() => { log.scrollTop = log.scrollHeight; }).observe(log); }catch(e){}
+
+/* ================= 時計 ================= */
+const WD = ['月','火','水','木','金','土','日'];
+function fmt(t, withDay){
+  const d = Math.floor(t / D), h = Math.floor((t % D) / 60), m = Math.floor(t % 60);
+  return (withDay ? WD[d % 7] + ' ' : '') + h + ':' + String(m).padStart(2, '0');
+}
+function setTime(t){ S.t = Math.round(t); $('#clock').textContent = fmt(S.t, true); }
+const hourNow = () => Math.floor((S.t % D) / 60);
+
+/* ================= 描画 ================= */
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function lastRow(){ const c = log.lastElementChild; return c && c.classList.contains('row') ? c : null; }
+function scrollEnd(){ log.scrollTop = log.scrollHeight; }
+
+function ensureDay(t){
+  const d = Math.floor(t / D);
+  if(S.lastDay === d) return;
+  S.lastDay = d;
+  const el = document.createElement('div'); el.className = 'day'; el.textContent = WD[d % 7] + '曜日';
+  log.appendChild(el);
+}
+function addSys(text, cls){
+  if(cls !== 'day') ensureDay(S.t);
+  const d = document.createElement('div'); d.className = cls || 'sys'; d.textContent = text;
+  log.appendChild(d); scrollEnd(); return d;
+}
+function bubbleHTML(item){
+  if(typeof item === 'string') return `<div class="bub">${esc(item)}</div>`;
+  if(item.s) return `<div class="stamp">${item.s}</div>`;
+  if(item.photo) return `<div class="photo">${PHOTOS[item.photo]}</div>`;
+  if(item.typing) return `<div class="bub typing"><i></i><i></i><i></i></div>`;
+  return '';
+}
+function addRow(who, item, time){
+  if(!item.typing) ensureDay(time ?? S.t);
+  const prev = lastRow();
+  const row = document.createElement('div');
+  row.className = 'row ' + who + (who === 'me' ? ' unread' : '') + (prev && prev.classList.contains(who) && who === 'her' ? ' cont' : '');
+  const meta = item.typing ? '' : `<div class="meta">${who === 'me' ? '<span class="rd" hidden>既読</span>' : ''}<span>${fmt(time ?? S.t)}</span></div>`;
+  row.innerHTML = (who === 'her' ? `<div class="ava">${ROSE_ICON}</div>` : '') +
+    `<div class="col">${who === 'her' ? '<span class="who">早瀬 静香</span>' : ''}${bubbleHTML(item)}</div>` + meta;
+  log.appendChild(row); scrollEnd();
+  return row;
+}
+function markRead(){
+  log.querySelectorAll('.row.me.unread').forEach(r => { r.classList.remove('unread'); const x = r.querySelector('.rd'); if(x) x.hidden = false; });
+}
+
+async function her(items, g, slow){
+  for(const it of items){
+    if(g !== S.gen) return false;
+    if(it.sys){ await sleep(700); if(g !== S.gen) return false; addSys(it.sys); continue; }
+    const ty = addRow('her', {typing:1});
+    const len = typeof it === 'string' ? it.length : 8;
+    await sleep((slow ? 1.6 : 1) * Math.min(2600, 900 + len * 70));
+    ty.remove();
+    if(g !== S.gen) return false;
+    addRow('her', it);
+    await sleep(350);
+  }
+  return g === S.gen;
+}
+
+function renderMeters(){
+  [['#mPulse','p'],['#mMind','m'],['#mPush','s']].forEach(([id, k]) => {
+    const el = $(id); el.querySelector('.fill').style.width = S[k] + '%'; el.querySelector('.num').textContent = S[k];
+  });
+}
+function showDelta(el, d, goodIfUp){
+  if(!d) return;
+  const s = document.createElement('span'); s.className = 'dl';
+  s.textContent = (d > 0 ? '+' : '') + d;
+  s.style.color = (d > 0) === goodIfUp ? 'var(--ok)' : 'var(--bad)';
+  el.appendChild(s); setTimeout(() => s.remove(), 1300);
+}
+function apply(fx){
+  const np = clamp(S.p + (fx.p || 0), 0, 100), nm = clamp(S.m + (fx.m || 0), 0, 100), ns = clamp(S.s + (fx.s || 0), 0, 100);
+  showDelta($('#mPulse'), np - S.p, true); showDelta($('#mMind'), nm - S.m, true); showDelta($('#mPush'), ns - S.s, false);
+  S.p = np; S.m = nm; S.s = ns; renderMeters();
+}
+function deadCheck(){
+  if(S.m <= 0){ ending('kokoro'); return true; }
+  if(S.s >= 100){ ending('kyori'); return true; }
+  return false;
+}
+
+// 既読がつくたびにマッチを擦る。うまくいっても、しけっていることが多い
+function strike(){
+  const fx = Object.assign({}, S.pending);
+  let txt, lit = false;
+  if((fx.p || 0) <= 0){ txt = 'シュッ……マッチが折れた。'; }
+  else if(Math.random() < .4){ fx.p = Math.max(1, Math.floor(fx.p / 3)); txt = 'シュッ……しけっていた。火はつかなかった。'; }
+  else if(fx.p >= 8){ txt = 'シュッ。小さな火花が散った。……すぐ消えた。'; lit = true; }
+  else { txt = 'シュッ……煙だけ出た。'; }
+  const d = document.createElement('div'); d.className = 'spark' + (lit ? ' lit' : '');
+  d.innerHTML = `<i>${lit ? '🔥' : '💨'}</i><span>${esc(txt)}</span>`;
+  ensureDay(S.t); log.appendChild(d); scrollEnd();
+  apply(fx);
+}
+function banner(){
+  const f = rnd(FAKE);
+  const b = document.createElement('div'); b.className = 'banner';
+  b.innerHTML = `<span class="ic">${f.ic}</span><span><b>${esc(f.who)}</b>${esc(f.tx)}</span>`;
+  $('#chat').appendChild(b); setTimeout(() => b.remove(), 2700);
+}
+
+/* ================= 入力 ================= */
+function setInput(on){ msgIn.disabled = !on; sendBtn.disabled = !on; if(!on) msgIn.value = ''; }
+function showChoices(turn, g){
+  choicesEl.innerHTML = '';
+  shuffle(turn.choices).forEach(c => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = c.t;
+    b.addEventListener('click', () => send(c, g));
+    choicesEl.appendChild(b);
+  });
+  choicesEl.hidden = false; choicesEl.scrollTop = 0; setInput(true);
+}
+function hideChoices(){ choicesEl.hidden = true; choicesEl.innerHTML = ''; setInput(false); }
+
+function classify(raw, turn){
+  const t = raw.replace(/\s/g, '');
+  const emoji = (t.match(/[\u{1F300}-\u{1FAFF}☀-➿]/gu) || []).length;
+  if(/歳|年齢|若く見え|若い|おばさん|年上|熟女|アラフォー|四十|40代/.test(t)) return 'age';
+  if(/マジ|まじ|ヤバ|やば|っす|ｗ|w$|（笑）|\(笑\)|！！|!!|〜〜|ワンチャン/.test(t) || emoji >= 2) return 'young';
+  if(turn.final && /好き|すき|お慕い|想って|大切/.test(t) && !/付き合って[！!]|！！|!!/.test(t)) return /薔薇|バラ|ばら|庭|花|春|紅茶|お茶|本/.test(t) ? 'common' : 'sincere';
+  if(/付き合|デート|ふたりで|二人で|会いたい|好き|すき|愛し|ディナー|お宅|家に|住所|泊ま/.test(t)) return 'push';
+  if(/薔薇|バラ|ばら|ロンサール|花|庭|紅茶|お茶|本|読書|エッセイ|向田|料理|季節|秋|紅葉|猫|生姜|体調|お大事/.test(t)) return 'common';
+  if(/です|ます|ください|ございま/.test(t)) return 'polite';
+  return 'plain';
+}
+
+$('#compose').addEventListener('submit', e => {
+  e.preventDefault();
+  const text = msgIn.value.trim();
+  if(!text || msgIn.disabled || !S || S.over) return;
+  const turn = TURNS[S.idx];
+  const same = turn.choices.find(c => c.t === text);
+  if(same) return send(same, S.gen);
+  const tag = classify(text, turn);
+  const extra = {};
+  // 自分の言葉で、ていねいに、彼女の好きなものに触れると少しだけ効く
+  if((tag === 'common' || tag === 'sincere') && /です|ます/.test(text)) extra.p = 3;
+  if(text.length > 80){ extra.s = 10; extra.long = true; }
+  send({ t:text, tag, free:true, bonus:extra }, S.gen);
+});
+
+/* ================= 送信と待機 ================= */
+async function send(c, g){
+  if(g !== S.gen || S.over) return;
+  const g2 = ++S.gen;
+  hideChoices();
+  addRow('me', c.stamp ? {s:c.t} : c.t);
+  if(c.end){ await sleep(900); markRead(); return ending(c.end); }
+  const turn = TURNS[S.idx];
+  const fx = Object.assign({}, TAGFX[c.tag] || {});
+  if(c.bonus){ for(const k of ['p','m','s']) if(c.bonus[k]) fx[k] = (fx[k] || 0) + c.bonus[k]; }
+  S.pending = fx;               // 効果は既読がついたときに反映
+  S.tag = c.tag;
+  S.sentAt = S.t;
+  S.chased = 0;
+  S.isLong = !!(c.bonus && c.bonus.long);
+  // 既読がつくまでの時間（時間単位）
+  const base = turn.read ? rr(turn.read[0], turn.read[1]) : rr(4, 30);
+  let hrs = base + S.s / 8 - S.p / 15 + (c.tag === 'push' ? 6 : 0) + (c.tag === 'young' ? 3 : 0);
+  hrs = Math.max(turn.read ? turn.read[0] : 1.5, hrs);
+  S.readAt = S.t + hrs * 60;
+  if(turn.final){
+    const neverRead = S.p < 12 || (S.p < 25 && Math.random() < .4);
+    S.readAt = neverRead ? Infinity : S.t + rr(6, 40) * 60;
+  }
+  let pr = turn.replyP ?? (0.3 + S.p / 110 + ({common:.3, sincere:.25, polite:.18, plain:.05}[c.tag] || 0) - S.s / 110 - (c.tag === 'push' ? .1 : 0));
+  S.willReply = turn.final || Math.random() < clamp(pr, .12, .92);
+  S.replyAt = null;
+  const next = TURNS[S.idx + 1];
+  S.windowEnd = turn.final ? S.t + 72 * 60 : Math.min(S.t + 48 * 60, next.start - 30);
+  S.readDone = false;
+  await sleep(500);
+  if(g2 !== S.gen) return;
+  if(S.isLong) addSys('（長文になってしまった）');
+  openWait(g2);
+}
+
+function openWait(g){
+  $('#wait').hidden = false; $('#chaseList').hidden = true;
+  lockWait(false);
+  $('#mono').textContent = rnd(MONO_UNREAD);
+  updWait();
+  S.waitGen = g;
+}
+function updWait(){
+  const h = Math.floor((S.t - S.sentAt) / 60);
+  $('#wElapsed').textContent = `送信から ${h}時間`;
+  const st = $('#wState');
+  st.textContent = S.readDone ? '既読' : '未読';
+  st.className = S.readDone ? 'read' : '';
+  $('#wChase').disabled = false;
+}
+function lockWait(on){ $('#wBtns').querySelectorAll('button').forEach(b => b.disabled = on); }
+function closeWait(){ $('#wait').hidden = true; }
+
+async function advance(kind){
+  const g = S.gen;
+  if(S.over || S.busy) return;
+  S.busy = true; lockWait(true); $('#chaseList').hidden = true;
+  let target, fx;
+  if(kind === 'sleep'){
+    const day = Math.floor(S.t / D) + (hourNow() >= 7 ? 1 : 0);
+    target = day * D + 7 * 60 + Math.floor(rr(0, 40));
+  } else {
+    target = S.t + rr(1, 4) * 60;
+  }
+  // 途中で起きるできごと（既読・返信・期限）で止まる
+  const events = [];
+  if(!S.readDone && S.readAt <= target) events.push(['read', S.readAt]);
+  if(S.readDone && S.replyAt && S.replyAt <= target) events.push(['reply', S.replyAt]);
+  if(S.windowEnd <= target) events.push(['timeout', S.windowEnd]);
+  events.sort((a, b) => a[1] - b[1]);
+  const ev = events[0];
+  const stopAt = ev ? ev[1] : target;
+  const hrs = Math.max(0, stopAt - S.t) / 60;
+  const night = hourNow() >= 1 && hourNow() < 6;
+  S.waitedMin += hrs * 60;
+  setTime(stopAt);
+  if(kind === 'sleep'){
+    apply({ m: Math.round(3 - hrs * 0.4) });
+    if(!ev) addSys('眠った。朝になった。');
+    else if(ev[0] === 'read') addSys('夜中に目が覚めた。既読がついていた。');
+    else if(ev[0] === 'reply') addSys('通知の音で目が覚めた。');
+  } else {
+    apply({ m: -Math.max(1, Math.round(hrs * (night ? 1.5 : 1.0))) });
+  }
+  if(deadCheck()){ S.busy = false; return; }
+
+  if(!ev){
+    const h = hourNow();
+    $('#mono').textContent = (h >= 1 && h < 6) ? rnd(MONO_NIGHT) : rnd(S.readDone ? MONO_READ : MONO_UNREAD);
+    if(kind !== 'sleep' && Math.random() < .28){ banner(); $('#mono').textContent = '通知だ！ …ちがった。'; apply({ m:-2 }); if(deadCheck()){ S.busy = false; return; } }
+    updWait(); lockWait(false); S.busy = false; return;
+  }
+
+  if(ev[0] === 'read'){
+    S.readDone = true; markRead(); updWait();
+    $('#mono').textContent = '既読がついた！';
+    strike();
+    if(S.chased === 0 && S.tag !== 'push') apply({ p:3 });   // 待てた人へのごほうび
+    if(deadCheck()){ S.busy = false; return; }
+    const turn = TURNS[S.idx];
+    if(turn.final){ await sleep(1400); return finalAnswer(g); }
+    if(S.willReply){
+      S.replyAt = S.t + rr(turn.read ? 0.2 : 0.5, turn.read ? 1 : 10) * 60;
+      if(Math.random() < .45){
+        await sleep(900);
+        if(g !== S.gen) return;
+        const ty = addRow('her', {typing:1}); $('#hdrSub').textContent = '入力中…';
+        await sleep(2200); ty.remove(); $('#hdrSub').textContent = S.status;
+        $('#mono').textContent = '「入力中…」が、消えた。';
+      }
+    } else {
+      S.replyAt = null;
+    }
+    lockWait(false); S.busy = false; return;
+  }
+
+  if(ev[0] === 'reply'){
+    closeWait();
+    const turn = TURNS[S.idx];
+    const pool = (turn.r && turn.r[S.tag]) || GENERIC_R[S.tag] || GENERIC_R.plain;
+    const ok = await her(rnd(pool), g, true);
+    if(!ok) return;
+    apply({ m: ['age','push'].includes(S.tag) ? -8 : 5 });
+    S.busy = false;
+    return nextTurn(g);
+  }
+
+  if(ev[0] === 'timeout'){
+    closeWait();
+    const turn = TURNS[S.idx];
+    if(turn.final){ S.busy = false; markRead(); return ending('mitoku'); }
+    if(S.readDone){ addSys('既読のまま、返信はなかった。'); apply({ m:-8 }); }
+    else { addSys('未読のまま、2日が過ぎた。'); apply({ m:-12, p:-2 }); }
+    S.busy = false;
+    if(deadCheck()) return;
+    return nextTurn(g);
+  }
+}
+
+function openChase(){
+  if(S.over || S.busy) return;
+  const cl = $('#chaseList');
+  if(!cl.hidden){ cl.hidden = true; return; }
+  cl.innerHTML = '<p>追いLINEを送ると、しつこさが上がります</p>';
+  CHASE.forEach(c => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = c.t;
+    b.addEventListener('click', () => chase(c));
+    cl.appendChild(b);
+  });
+  cl.hidden = false;
+}
+function chase(c){
+  if(S.over || S.busy) return;
+  $('#chaseList').hidden = true;
+  S.chased++; S.chaseTotal++;
+  addRow('me', c.stamp ? {s:c.t} : c.t);
+  if(!S.readDone) S.readAt += 4 * 60;
+  else if(S.willReply && Math.random() < .5){ S.willReply = false; S.replyAt = null; }
+  apply({ s: 15 + (S.chased - 1) * 10 + (S.readDone ? 5 : 0), p:-3 });
+  $('#mono').textContent = S.readDone ? '既読なのに、送ってしまった。' : '送ってしまった。';
+  if(S.readDone){ setTimeout(() => { if(!S.over) markRead(); }, 1200); }
+  deadCheck();
+}
+
+/* ================= 進行 ================= */
+async function nextTurn(g){
+  await sleep(1300);
+  if(g !== S.gen || S.over) return;
+  runTurn(S.idx + 1);
+}
+
+async function runTurn(i){
+  if(S.over) return;
+  S.idx = i;
+  const turn = TURNS[i], g = ++S.gen;
+  if(i > 0) apply({ s:-5 });
+  setTime(turn.start);
+  if(turn.status !== undefined){ S.status = turn.status; $('#hdrSub').textContent = turn.status; }
+  if(turn.scene) addSys(turn.scene);
+  if(turn.herFirst){
+    await sleep(800);
+    S.waitedMin += 0;
+    if(!(await her(turn.herFirst, g, true))) return;
+  }
+  await sleep(500);
+  if(g !== S.gen) return;
+  showChoices(turn, g);
+}
+
+function finalAnswer(g){
+  const fx = S.tag === 'push' ? -6 : S.tag === 'common' ? 4 : 0;
+  apply({ p:fx });
+  let k;
+  if(S.p >= 80 && S.s <= 20) k = 'sakura';
+  else if(S.p >= 60) k = 'ocha';
+  else if(S.p >= 30) k = 'douryou';
+  else k = 'wakai';
+  closeWait(); S.busy = false;
+  ending(k);
+}
+
+async function ending(key){
+  if(S.over) return;
+  S.over = true;
+  const g = ++S.gen;
+  hideChoices(); closeWait();
+  const E = ENDINGS[key];
+  S.over = false;
+  await sleep(700);
+  if(key === 'mitoku') setTime(Math.floor(S.t / D + 1) * D);
+  const ok = await her(E.seq, g, true);
+  S.over = true;
+  if(!ok) return;
+  await sleep(1800);
+  if(g !== S.gen) return;
+  if(!gotEnds.includes(key)){ gotEnds.push(key); saveEnds(gotEnds); }
+  showEnd(key);
+}
+
+function renderColl(el, lbl){
+  el.innerHTML = END_ORDER.map(k => `<span class="${gotEnds.includes(k) ? 'got' : ''}">${gotEnds.includes(k) ? ENDINGS[k].title : '？？？'}</span>`).join('');
+  lbl.textContent = `回収したエンディング ${gotEnds.filter(k => ENDINGS[k]).length} / ${END_ORDER.length}`;
+}
+function showEnd(key){
+  const E = ENDINGS[key];
+  const r = $('#endRank'); r.textContent = E.rank + ' END'; r.className = 'rank ' + E.rank;
+  const h = $('#endTitle'); h.textContent = E.title; h.className = E.rank === 'GOOD' || E.rank === 'TRUE' ? 'good' : '';
+  $('#endDesc').textContent = E.desc; $('#endTip').textContent = E.tip;
+  $('#sPulse').textContent = S.p; $('#sMind').textContent = S.m;
+  $('#sWait').textContent = Math.round(S.waitedMin / 60) + 'h'; $('#sChase').textContent = S.chaseTotal;
+  renderColl($('#collEnd'), $('#collLbl2'));
+  const txt = `『既読が、つかない。』で【${E.title}】でした。\n火${S.p} / 心${S.m} / 既読を待った時間 ${Math.round(S.waitedMin / 60)}時間`;
+  $('#shareBtn').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(txt + '\n' + location.href.split('#')[0]);
+  $('#end').hidden = false; $('#end').scrollTop = 0;
+}
+
+function start(){
+  S = { p:5, m:100, s:0, idx:-1, gen:0, t:0, over:false, busy:false, status:'庭の薔薇のお世話をしています',
+        pending:{}, tag:'plain', lastDay:-1, sentAt:0, readAt:0, replyAt:null, willReply:false, windowEnd:0, readDone:false,
+        chased:0, chaseTotal:0, waitedMin:0 };
+  [...skips].forEach(f => f());
+  hideChoices(); closeWait();
+  log.innerHTML = '';
+  $('#title').hidden = true; $('#end').hidden = true; $('#chat').hidden = false;
+  $('#hdrAva').innerHTML = ROSE_ICON; $('#hdrSub').textContent = S.status;
+  setTime(at(0,21,10));
+  renderMeters();
+  addSys('早瀬 静香 と友だちになりました');
+  addRow('her', '早瀬です。');
+  addRow('her', '本日はお疲れさまでした。');
+  setTimeout(() => runTurn(0), 900);
+}
+function toTitle(){
+  if(S){ S.over = true; S.gen++; }
+  hideChoices(); closeWait();
+  $('#chat').hidden = true; $('#end').hidden = true; $('#title').hidden = false;
+  renderColl($('#collTitle'), $('#collLbl'));
+}
+
+$('#wWait').addEventListener('click', () => advance('wait'));
+$('#wSleep').addEventListener('click', () => advance('sleep'));
+$('#wChase').addEventListener('click', openChase);
+$('#startBtn').addEventListener('click', start);
+$('#againBtn').addEventListener('click', start);
+$('#titleBtn').addEventListener('click', toTitle);
+$('#backBtn').addEventListener('click', toTitle);
+renderColl($('#collTitle'), $('#collLbl'));
+})();
+</script>
+
+</html>
